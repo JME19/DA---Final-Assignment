@@ -1,0 +1,410 @@
+---
+title: "R-Google Analytics"
+author: "José Monzón Egana"
+date: "11/15/2021"
+output: pdf_document
+---
+
+https://ga-dev-tools.web.app/dimensions-metrics-explorer/
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(magrittr)
+```
+
+```{r}
+#devtools::install_github("Tatvic/RGoogleAnalytics")
+```
+```{r}
+#install.packages('googleAnalyticsR')
+library(googleAnalyticsR)
+```
+
+```{r}
+ga_auth(email='jme@framacph.com')
+```
+#```{r}
+my_accounts <- ga_account_list()
+#```
+#```{r}
+view(my_accounts)
+#```
+#```{r}
+# dimension1 = No transactions
+metric1 <- met_filter("transactions","LESS_THAN",1)
+metric2 <- met_filter("users","GREATER_THAN",1)
+
+#```
+#```{r}
+mfilters <- filter_clause_ga4(list(metric1,metric2),operator = "AND")
+
+#```
+#```{r}
+ga_id <- 139359521
+#```
+
+
+
+
+
+#```{r}
+ga_results <- google_analytics(ga_id,
+                               date_range = c("2021-01-01", "2021-11-25"),
+                               metrics = c('users', 'sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate'),
+                               dimensions = c('socialNetwork','city','country','userAgeBracket','userGender','deviceCategory','continent'),
+                               met_filters = mfilters,
+                                max = -1,
+                            anti_sample = TRUE)
+#```
+```{r}
+euromarket <- ga_results %>%
+    group_by(country) %>%
+  filter(continent == "Europe") %>%
+  select('country','users', 'sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+euromarket %<>%
+  filter(country != "Denmark") %>%
+  filter(users > 270)
+```
+```{r}
+euromarket
+```
+
+```{r}
+pct4 <- round(euromarket$users/sum(euromarket$users)*100)
+lbls4 <- paste(euromarket$country, pct4) # add percents to labels
+lbls4 <- paste(lbls4,"%",sep="") # ad % to labels
+pie(euromarket$users,labels = lbls4, col=myPalette,
+   main="Visits to framacph.com during 2021 YTD in the Euro Market (w/o DK)")
+```
+
+
+In the European market, the biggest country in terms of visits to the site during 2021 (without buying any product) was Spain, however, when we analyse the historical sales in Europe (without Denmark) for the past 3 years, Spain only represents 7% of sales, being the biggest players Germany, Sweden, France, the UK, and Switzerland.
+Additionally, it can be said from Spain that holds the highest bounce rate average, meaning that the users just open the first webpage, probably following a link, and then they close it. On a different note, the users that remain interested in the content of the brand, click in average 7 times inside of the site. This may include other webpages or any kind of interaction with that same webpaged that they were directed to.
+Let's try to identify who are these curious spaniards that they look but they do not end up buying products.
+
+```{r}
+spain <- ga_results %>%
+    group_by(city) %>%
+  filter(country == "Spain") %>%
+  select('city','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+
+```{r}
+spain
+```
+```{r}
+write.table(spain)
+```
+
+Most of them live in the 3 biggest cities of the country, but now let's analyse them all together, to see if we can find any pattern.
+```{r}
+spain2 <- ga_results %>%
+    group_by(userGender, deviceCategory) %>%
+  filter(country == "Spain") %>%
+  select('userGender','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+spain2
+```
+So, 95% of the users are women and more than 60% of them are accessing to the website with their phone. Their bounce rate is quite high and correlates with their average session duration, but it should be compared to other sites to see if it is normal than 48% of the times users enter to a website close it immediately.
+
+```{r}
+mobilebr<- ga_results %>%
+    group_by(deviceCategory) %>%
+  select('deviceCategory','socialNetwork','users','avgSessionDuration','bounceRate') %>%
+    summarize(users = sum(users), avgSessionDuration=mean(avgSessionDuration), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+mobilebr %>%
+  arrange(desc(bouncerate))
+```
+Actually it looks like the world bounce rate average is 2% lower than the Spanish one.
+
+```{r}
+spain3 <- ga_results %>%
+    group_by(userAgeBracket) %>%
+  filter(country == "Spain") %>%
+  filter(userGender == "female") %>%
+  select('userAgeBracket','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+spain3
+```
+Well, as it can be seen, age is not too relevant. It is pretty well divided.
+
+```{r}
+spain4 <- ga_results %>%
+    group_by(socialNetwork) %>%
+  filter(country == "Spain") %>%
+  filter(deviceCategory == "mobile") %>%
+  filter(userGender == "female") %>%
+  select('socialNetwork','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+spain4
+```
+This is very relevant indeed! More than 65% of the mobile users are coming from Instagram. Maybe a Spanish account should be set to attract even more people! Additionally, a Spanish version of the website may help to attract the users and lower the bounce rate and extend their stay in the website.
+
+Now let's focus in the US, Frama's second biggest market.
+
+```{r}
+ga_results %>%
+    group_by(city) %>%
+  filter(country == "United States") %>%
+  select('city','users', 'sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(productAddsToCart))
+```
+It can be seen that New York, LA and SF concentrate most of Frama's users. Let's deep dive.
+```{r}
+us2 <- ga_results %>%
+    group_by(userGender, deviceCategory) %>%
+  filter(country == "United States") %>%
+  select('userGender','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+us2
+```
+Again we can see that most of Frama's potential customers are women, but differently from the previous case, only 20% of the users are entering the site through their phones. Consequently, the bounce rate is much lower, they spent more time in the website and they add more products to the cart. Let's see where are these visits coming from and the age brackets.
+
+```{r}
+us3 <- ga_results %>%
+    group_by(userAgeBracket, deviceCategory) %>%
+  filter(country == "United States") %>%
+  select('userAgeBracket','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+us3
+```
+```{r}
+usage <- ga_results %>%
+    group_by(userAgeBracket) %>%
+  select('userAgeBracket','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+usage
+```
+
+```{r}
+us4 <- ga_results %>%
+    group_by(socialNetwork, deviceCategory) %>%
+  filter(country == "United States") %>%
+  select('socialNetwork','users','sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate') %>%
+    summarize(users = sum(users),avgsessionsPerUser = mean(sessionsPerUser), avgSessionDuration=mean(avgSessionDuration), hits = sum(hits), productAddsToCart = sum(productAddsToCart), bouncerate = mean(bounceRate)) %>%
+  ungroup() %>%
+  arrange(desc(users))
+```
+```{r}
+us4
+```
+
+
+In this case, we can see than 80% of the users are between 18 and 44 and 50% of all users are between 25 and 34.
+A pretty big difference with the Spanish case. 
+However, the most remarkable finding is the low percentage of users entering the site through their mobile phones. 
+Does Frama need a better community manager in the US?
+
+Many more analysis like the ones shown above can be conducted, but due to time constraints I will proceed with other type of analysis.
+
+In the following part, I will conduct a NLP analysis on the webpages that users in Frama visit. I tried to segment it by country, as I done before but it appears to be some kind of problem. The combination of metrics and dimensions relevant for this analysis is not available. I had a meeting with the ecommerce manager and we decided that we will conduct this analysis using the world as a whole segment. Later on, when the new website will be live, it is expected that there will be a much better integration with google analytics and shopify, another ecommerce platform that helps to understand websites performances.
+
+
+Since I am not able to download individual data from every time the users entered to the website, I decided to select minute and hour in addition to Page title. This selection will help me as a proxy to provide a unique id a each of the visits by the users. 
+Since there are almost a million views in the webpage, I'll download the data in 4 cuts and then I will append the tables.
+
+```{r}
+ga_results_nlp_4 <-
+  google_analytics(ga_id,
+                    date_range = c("2021-10-01", "2021-11-25"),
+                    metrics = c('users'),
+                    dimensions = c('pageTitle','dateHourMinute'),
+                    max = -1,
+                    anti_sample = TRUE)
+```
+```{r}
+ga_results_appended <- do.call(rbind, list(ga_results_nlp_1, ga_results_nlp_2,ga_results_nlp_3,ga_results_nlp_4))
+```
+
+```{r}
+ga_results_appended %>%
+  arrange(desc(users))
+```
+#```{r}
+#ga_results_nlp <- ga_results_appended %>%
+ # group_by(pageTitle) %>%
+  #select(pageTitle,users) %>%
+  #summarise(users= n()) %>%
+  #ungroup() %>%
+  #arrange(desc(users))
+#```
+
+```{r}
+library(textdata)
+library(wordcloud)
+library(tidytext)
+library(twitteR)
+```
+Even though what I'm analyzing are not tweets, I will use the twitteR package to analyse the name of the webpages visited by the users.
+```{r}
+ga_results_nlp_tidy <- ga_results_appended %>%
+  unnest_tokens(word, pageTitle, token = "tweets")
+```
+```{r}
+ga_results_nlp_tidy %<>%
+  select(users,word)
+```
+
+in this step I will multiply the users at a specific hour and time that visited each website.
+This really shows the number of times the words appeared. 
+#```{r}
+#ga_results_nlp_tidy %<>%
+ # select (word,users) %>%
+  ##mutate(n2 = multiply_by(users,n)) %>%
+  #select(word, users, n, n2) %>%
+  #head(500)
+#```
+```{r}
+ga_results_nlp_tidy %>% count(word, sort = TRUE)
+```
+```{r}
+library(SnowballC)
+
+ga_results_nlp_tidy %<>%
+  mutate(word = word %>% str_remove_all('[^[:alnum:]]')) %>% 
+  filter(str_length(word) > 2 ) %>% 
+  group_by(word) %>%
+  filter(n() > 100) %>% 
+  mutate(word = wordStem(word)) %>%
+  ungroup() %>%
+  anti_join(stop_words, by = 'word') 
+```
+```{r}
+ga_results_nlp_tidy %>%
+  count(word, sort = TRUE) %>%
+  head(20)
+
+```
+```{r}
+ga_results_nlp_tidy %>%
+  count(word, sort = TRUE) %>%
+  #filter(word != "frama") %>%
+  slice(1:20) %>%
+  ggplot(aes(x = fct_reorder(word, n), y = n, fill = word)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(title = "Top 20 words", x = NULL) 
+
+```
+```{r}
+ga_results_nlp_tidy %>%
+  count(word) %>%
+  with(wordcloud(word, n, 
+                 max.words = 100, 
+                 color = "red"))
+```
+TFIDF
+
+```{r}
+ga_results_nlp_tidy %<>%
+  add_count(users, word) %>%
+  distinct(users, word, .keep_all = TRUE) %>%
+  bind_tf_idf(term = word,
+              document = users,
+              n = n)
+
+```
+```{r}
+ga_results_nlp_tidy %>%
+  count(word, wt = tf_idf, sort = TRUE) %>%
+  head(20)
+```
+BIGRAM ANALYSIS
+
+```{r}
+ga_results_nlp_bigram <- ga_results_appended %>%
+  unnest_tokens(word, pageTitle, token = "tweets")
+```
+```{r}
+ga_results_nlp_bigram %<>%
+  select(users,word)
+```
+```{r}
+ga_results_nlp_bigram %>% count(word, sort = TRUE)
+```
+
+```{r}
+ga_results_nlp_bigram %<>%
+  mutate(word = word %>% str_remove_all('[^[:alnum:]]')) %>% 
+  filter(str_length(word) > 2 ) %>%
+  group_by(word) %>%
+  filter(n() > 100) %>% 
+  mutate(word = wordStem(word)) %>%
+  ungroup() %>%
+  anti_join(stop_words, by = 'word') 
+```
+
+```{r}
+library(widyr)
+library(tidygraph)
+el_words2 <- ga_results_nlp_bigram %>%
+  pairwise_count(word, users, sort = TRUE) %>%
+  rename(from = item1, to = item2, weight = n)
+```
+```{r}
+el_words2
+```
+```{r}
+library(tidygraph)
+library(ggraph)
+```
+
+
+```{r}
+nlpgraph <- el_words2 %>%
+  filter(weight >= 1) %>%
+  as_tbl_graph(directed = FALSE) %>%
+  igraph::simplify() %>% as_tbl_graph() 
+```
+```{r}
+set.seed(1992)
+nlpgraph %N>%
+#  filter(centrality_degree(weight = weight) > 100) %>%
+    slice(1:20) %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(width = weight, edge_alpha = weight)) +
+  geom_node_point(aes(size = centrality_degree(weight = weight)), color = "plum4") +
+  geom_node_text(aes(label = name,), repel = TRUE) +
+  theme_graph() +
+  theme(legend.position = 'none') +
+  labs(title = 'Top 20 bigram combinations')
+```
