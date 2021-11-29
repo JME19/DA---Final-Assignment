@@ -1,0 +1,477 @@
+---
+title: "1st Assignment"
+author: "José Monzón Egana"
+date: "9/26/2021"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(magrittr)
+library(skimr)
+```
+```{r}
+my_data <- read.csv2(file.choose())
+#data <- read.csv('Final Assignment Data Analysis.csv', header = TRUE, sep=";")
+```
+```{r}
+framaCPH <- my_data
+```
+
+```{r}
+framaCPH %>% head()
+```
+```{r}
+framaCPH %>% skim()
+```
+
+```{r}
+framaCPH %>% summary()
+```
+
+```{r}
+framaCPH %>% glimpse()
+```
+```{r}
+framaCPH <- my_data[-c(22,23)]
+```
+Renaming columns that had a space between words
+```{r}
+framaCPH %<>%
+rename(
+    salestotal = Sales..Total..DKK.,
+    date = Sales..Order.Date,
+    folder= Product..Folder,
+    pricelist = Order..Pricelist,
+    market = Order..Market,
+    collection = Product..Collection,
+    sku = Product..Product.SKU,
+    orderid = Sales..Order.ID,
+    brand = Product..Brand,
+    city = Billing.Invoice.Address..City,
+    state = Billing.Invoice.Address..State,
+    account_id = Account..Account.Number,
+    IP = Order..IP,
+    prod_name = Product..Product,
+    units = Sales..Units,
+    supplier = Product..Supplier,
+    variant = Product..Variant,
+    country = Country,
+    account_name = Account..Account.Name
+    )
+```
+```{r}
+  framaCPH$date <- str_sub(framaCPH$date,1,nchar(framaCPH$date)-6)
+  framaCPH$date <- as.Date(framaCPH$date, "%d/%m/%Y")
+```
+
+Random check
+```{r}
+framaCPH %>%
+  count(country== 'Denmark')
+```
+mean, median, min & max value per nationality
+
+```{r}
+framaCPH %>%
+  group_by(country) %>%
+  filter(country != "Korea, Republic of") %>%
+  summarize(orders= n(), total_sales = sum(salestotal), mean.salestotal = mean(salestotal, na.rm = TRUE), median.salestotal = median(salestotal, na.rm = TRUE), max.salestotal = max(salestotal, na.rm= TRUE)) %>%
+  ungroup() %>%
+  arrange(desc(orders)) %>%
+  head(1)
+```
+
+
+
+grouped by account ID
+```{r}
+salesbycustomer <- framaCPH %>%
+  group_by(market, country) %>%
+  summarize(orders= n(), total_sales = sum(salestotal)) %>%
+  filter(orders > 200) %>%
+  ungroup() %>%
+  arrange(desc(orders))
+```
+
+```{r}
+#library(ggplot2)
+ggplot(salesbycustomer, aes(x=country, y=total_sales )) + 
+  geom_bar(stat = "identity")
+# Calculate the future positions on the x axis of each bar (left border, central position, right border)
+
+#ggplot(salesbycustomer, aes(x=country, fill=orders )) + 
+ # geom_bar( ) +
+  #scale_fill_hue(c = 40) +
+  #theme(legend.position="none")
+```
+
+```{r}
+framaCPH %>%
+  group_by(state) %>%
+  filter(str_detect(country, "United States")) %>%
+  summarize(orders = n(), mean.salestotal = mean(salestotal, na.rm = TRUE), max.salestotal = max(salestotal, na.rm= TRUE)) %>%
+  ungroup() %>%
+  arrange(desc(orders))
+```
+```{r}
+library(RColorBrewer)
+marketgroup <- framaCPH %>%
+  group_by(market) %>%
+  summarise(salestotal = sum(salestotal)) %>%
+  ungroup()
+```
+
+
+```{r}
+coul <- brewer.pal(5, "Set2") 
+barplot(height=marketgroup$salestotal, names=marketgroup$market, col=coul )
+```
+```{r}
+framaCPH %>%
+  filter(market == "Europe") %>%
+ggplot(aes(x = salestotal, fill = country)) +
+        ggtitle ("distribution of spending per orders ") +
+  geom_histogram()
+  scale_x_log10()
+```
+```{r}
+framaCPH %>%
+  filter(country == "Denmark") %>%
+ggplot(aes(x = salestotal,fill = collection)) +
+        ggtitle ("orders by collection ") +
+  geom_histogram()
+  scale_x_log10()
+```
+```{r}
+framaCPH %>%
+  filter(country == "United States") %>%
+ggplot(aes(x = salestotal, fill = collection)) +
+        ggtitle ("distribution of spending per orders ") +
+  geom_histogram()
+  scale_x_log10()
+```
+```{r}
+framaCPH %>%
+  filter(market == "Asia") %>%
+ggplot(aes(x = salestotal, fill = country)) +
+        ggtitle ("distribution of spending per orders ") +
+  geom_histogram()
+  scale_x_log10()
+```
+
+```{r}
+test <- framaCPH %>% mutate(Year=format(as.Date(framaCPH$date), "%Y")) %>%
+  group_by(country) %>% 
+  summarise(orders = n(),salestotal = sum(salestotal), mean.Gross.Margin = mean(Gross.Margin, na.rm = TRUE))
+```
+
+
+```{r}
+test %>% 
+arrange(desc(mean.Gross.Margin))
+ # select(country, aggregate(salestotal), Year)
+ #head()
+  #filter(country == "Denmark") %>%
+   # ggplot(mapping=aes(x=Year, y=salestotal, col=market)) + geom_line()
+```
+```{r}
+test1 <- framaCPH %>% mutate(Year=format(as.Date(framaCPH$date), "%Y")) %>%
+  group_by(market) %>% 
+    summarise(orders = n(),salestotal = sum(salestotal), mean.Gross.Margin = mean(Gross.Margin, na.rm = TRUE)) %>%
+    filter(orders > 100)
+test1 %>% 
+arrange(desc(mean.Gross.Margin))
+ # select(country, aggregate(salestotal), Year)
+ #head()
+  #filter(country == "Denmark") %>%
+   # ggplot(mapping=aes(x=Year, y=salestotal, col=market)) + geom_line()
+```
+```{r}
+install.packages('RColorBrewer')
+library(RColorBrewer)
+myPalette <- brewer.pal(6, "Set2") 
+pct <- round(test1$salestotal/sum(test1$salestotal)*100)
+lbls <- paste(test1$market, pct) # add percents to labels
+lbls <- paste(lbls,"%",sep="") # ad % to labels
+pie(test1$salestotal,labels = lbls, col=myPalette,
+   main="Historical Relative importance of Market")
+```
+```{r}
+sales_europe <- framaCPH %>% mutate(Year=format(as.Date(framaCPH$date), "%Y")) %>%
+  filter(market == "Europe") %>%
+  filter(country != "Denmark") %>%
+  filter(salestotal > 5000) %>%
+  group_by(country) %>% 
+    summarise(orders = n(),salestotal = sum(salestotal), mean.Gross.Margin = mean(Gross.Margin, na.rm = TRUE)) %>%
+      filter(orders > 20)
+```
+```{r}
+pct3 <- round(sales_europe$salestotal/sum(sales_europe$salestotal)*100)
+lbls3 <- paste(sales_europe$country, pct3) # add percents to labels
+lbls3 <- paste(lbls3,"%",sep="") # ad % to labels
+pie(sales_europe$salestotal,labels = lbls3, col=myPalette,
+   main="Historical importance of Euro countries in the Euro Market (w/o DK)")
+```
+
+```{r}
+sales_states <- framaCPH %>% mutate(Year=format(as.Date(framaCPH$date), "%Y")) %>%
+  filter(country == "United States") %>%
+  group_by(city) %>% 
+    summarise(orders = n(),salestotal = sum(salestotal), mean.Gross.Margin = mean(Gross.Margin, na.rm = TRUE)) %>%
+      filter(orders > 20)
+```
+```{r}
+pct2 <- round(sales_states$salestotal/sum(sales_states$salestotal)*100)
+lbls2 <- paste(sales_states$city, pct2) # add percents to labels
+lbls2 <- paste(lbls2,"%",sep="") # ad % to labels
+pie(sales_states$salestotal,labels = lbls2, col=myPalette,
+   main="Historical Relative importance of Market")
+```
+Network Analysis
+I will analyze the network of Frama's customers in the US during 2021.
+For that I will filter the data and then convert some of the categorical variables such as collections, brands or folders to integers, so I can create the association between nodes.
+```{r}
+framanw <- framaCPH %>% 
+  filter(country == 'United States') %>%
+  filter(date >= as.Date("2021-01-01")) %>%
+  arrange(date)
+```
+```{r}
+framanw
+```
+
+
+```{r}
+framanw$brand.r <- as.integer(as.factor(framanw$brand))
+framanw$collection.r <- as.integer(as.factor(framanw$collection))
+framanw$folder.r <- as.integer(as.factor(framanw$folder))
+```
+```{r}
+framanw %>% count(account_id, sort = TRUE)
+```
+In this step I will create the connection between the customers and the collections.
+The result will be the customers that share interest in the same collections
+```{r}
+el_2m <- framanw %>%
+  select(account_id, collection.r) 
+el <- el_2m %>%
+  left_join(el_2m %>% select(account_id, collection.r), by = "collection.r") 
+el %<>% 
+  select(-collection.r) %>%
+  rename(from = account_id.x, 
+         to = account_id.y) %>%
+  filter(from != to)
+el %<>%
+  count(from, to, name = 'weight')  %>%
+  mutate(weight = (weight) )
+el %>% 
+  arrange(desc(weight)) %>%
+  head()
+```
+This graph shows the distribution of the connection between customers.
+As can be seen, most of the customers have a pretty low affiliation, while some of them can reach up to 70.
+```{r}
+el %>% 
+  ggplot(aes(x = weight)) +
+  geom_histogram()
+```
+I will filter out the weight affiliation smaller than 5 because I want to create a network of good customers.
+```{r}
+el %>% 
+  filter(weight > 4) %>%
+  filter(weight < 40) %>%
+    ggplot(aes(x = weight)) +
+  geom_histogram()
+```
+```{r}
+nodes <- framanw %>%
+  distinct(account_id, .keep_all = TRUE) %>%
+  select(account_id, account_name, collection, collection.r) %>%
+  rename(person_name = account_name,
+         name = account_id) %>%
+  mutate(name = name %>% as.character())
+```
+```{r}
+library(ggplot2)
+library(igraph)
+
+  g <- el %>% as_tbl_graph(directed = FALSE) %>%
+  igraph::simplify() %>%
+  as_tbl_graph(directed = FALSE)
+```
+```{r}
+g <- g %N>% 
+filter(!node_is_isolated()) %N>% 
+  filter(percent_rank(centrality_degree(weights = weight)) >= 0.5)
+```
+
+```{r}
+g <- g %N>%
+  mutate(community = group_louvain(weights = weight) ) 
+```
+```{r}
+g <- g %N>%
+  morph(to_split, community) %>% 
+    mutate(cent_dgr_int = centrality_degree(weights = weight)) %>%
+    mutate(com_center = cent_dgr_int == max(cent_dgr_int)) %>%
+  unmorph()
+```
+
+```{r}
+g %N>%
+  as_tibble() %>%
+  count(community)
+```
+
+```{r}
+g <- g %N>%
+  left_join(nodes, by = c('name' = 'name'))
+
+#left_join(data %>% select(EID, title, journal, year, citations), by = c('name' = 'EID')) %>%
+ # mutate(title = title %>% str_trunc(30))
+```
+
+
+```{r}
+g %>%
+  ggraph(layout = 'graphopt') + 
+  geom_edge_link(aes(width = weight,
+                     color = .N()$community[from] %>% as.factor()),
+                alpha = 0.5, 
+                show.legend = FALSE) +
+      scale_edge_width(range = c(0.1, 2)) + 
+  geom_node_point(aes(color = community %>% as.factor(),
+                      size = centrality_degree(weight = weight), 
+                      )) +
+  geom_node_text(aes(label = person_name, filter = com_center == TRUE), repel = TRUE) +
+  theme_graph()   + 
+  theme(legend.position = 'bottom') + 
+  labs(title = 'Network of US recurring customers',
+       subtitle = 'as of 2021 YTD',
+       color = 'Community',
+       size = 'Degree')
+```
+
+```{r}
+framanw2 <- framaCPH %>% 
+  filter(country == 'Spain') %>%
+  filter(date >= as.Date("2021-01-01")) %>%
+  arrange(date)
+```
+```{r}
+framanw2
+```
+
+```{r}
+framanw2$collection.r <- as.integer(as.factor(framanw2$collection))
+```
+```{r}
+framanw2 %>% count(account_id, sort = TRUE)
+```
+In this step I will create the connection between the customers and the collections.
+The result will be the customers that share interest in the same collections
+```{r}
+el_2msp <- framanw2 %>%
+  select(account_id, collection.r) 
+elsp <- el_2msp %>%
+  left_join(el_2m2 %>% select(account_id, collection.r), by = "collection.r") 
+elsp %<>% 
+  select(-collection.r) %>%
+  rename(from = account_id.x, 
+         to = account_id.y) %>%
+  filter(from != to)
+elsp %<>%
+  count(from, to, name = 'weight')  %>%
+  mutate(weight = (weight) )
+elsp %>% 
+  arrange(desc(weight)) %>%
+  head()
+```
+This graph shows the distribution of the connection between customers.
+As can be seen, most of the customers have a pretty low affiliation, while some of them can reach up to 35.
+```{r}
+elsp %>% 
+  ggplot(aes(x = weight)) +
+  geom_histogram()
+```
+I will filter out the weight affiliation smaller than 2 because I want to create a network of recurring customers. However, since they are less than their US counterparts, I will just filter out customers who only bought once.
+```{r}
+elsp %>% 
+  filter(weight > 2) %>%
+    ggplot(aes(x = weight)) +
+  geom_histogram()
+```
+```{r}
+nodessp <- framanw2 %>%
+  distinct(account_id, .keep_all = TRUE) %>%
+  select(account_id, account_name, collection, collection.r) %>%
+  rename(person_name = account_name,
+         name = account_id) %>%
+  mutate(name = name %>% as.character())
+```
+```{r}
+gsp <- elsp %>% as_tbl_graph(directed = FALSE) %>%
+  igraph::simplify() %>%
+  as_tbl_graph(directed = FALSE)
+```
+```{r}
+gsp <- gsp %N>% 
+filter(!node_is_isolated()) %N>% 
+  filter(percent_rank(centrality_degree(weights = weight)) >= 0.1)
+```
+
+```{r}
+gsp <- gsp %N>%
+  mutate(community = group_louvain(weights = weight) ) 
+```
+```{r}
+gsp <- gsp %N>%
+  morph(to_split, community) %>% 
+    mutate(cent_dgr_int = centrality_degree(weights = weight)) %>%
+    mutate(com_center = cent_dgr_int == max(cent_dgr_int)) %>%
+  unmorph()
+```
+
+```{r}
+gsp %N>%
+  as_tibble() %>%
+  count(community)
+```
+
+```{r}
+gsp <- gsp %N>%
+  left_join(nodessp, by = c('name' = 'name'))
+
+#left_join(data %>% select(EID, title, journal, year, citations), by = c('name' = 'EID')) %>%
+ # mutate(title = title %>% str_trunc(30))
+```
+
+
+```{r}
+gsp %>%
+  ggraph(layout = 'graphopt') + 
+  geom_edge_link(aes(width = weight,
+                     color = .N()$community[from] %>% as.factor()),
+                alpha = 0.5, 
+                show.legend = FALSE) +
+      scale_edge_width(range = c(0.1, 2)) + 
+  geom_node_point(aes(color = community %>% as.factor(),
+                      size = centrality_degree(weight = weight), 
+                      )) +
+  geom_node_text(aes(label = person_name, filter = com_center == TRUE ), repel = TRUE) +
+  theme_graph()   + 
+  theme(legend.position = 'bottom') + 
+  labs(title = 'Network of Spanish customers',
+       subtitle = 'as of 2021 YTD',
+       color = 'Community',
+       size = 'Degree')
+```
+
+
+
+
+
