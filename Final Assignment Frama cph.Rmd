@@ -84,9 +84,6 @@ framaCPH %>%
   arrange(desc(orders)) %>%
   head(1)
 ```
-
-
-
 grouped by account ID
 ```{r}
 salesbycustomer <- framaCPH %>%
@@ -470,8 +467,3 @@ gsp %>%
        color = 'Community',
        size = 'Degree')
 ```
-
-
-
-
-
