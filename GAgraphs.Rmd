@@ -9,37 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
----
-title: "R-Google Analytics"
-author: "José Monzón Egana"
-date: "11/15/2021"
-output: pdf_document
----
-
-https://ga-dev-tools.web.app/dimensions-metrics-explorer/
+## R Markdown - https://ga-dev-tools.web.app/dimensions-metrics-explorer/
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(magrittr)
 ```
@@ -76,8 +48,8 @@ mfilters <- filter_clause_ga4(list(metric1,metric2),operator = "AND")
 ga_id <- 139359521
 ```
 
+filtering for dates
 ```{r}
-#QQ dates 
 yesterday <- Sys.Date() - 1
 threeDaysAgo <- Sys.Date() - 3
 ThirtyDaysAgo <- Sys.Date() - 30
@@ -85,12 +57,11 @@ SixMonthsAgo <- Sys.Date()-183
 OneYearAgo <- Sys.Date()-365
 FiveYearsAgo <- Sys.Date()-1827
 ```
+Sessions during the last calendar year
 ```{r}
-#Traffic en sessions sur 30 jours avec courbe de tendance
 galastyear <- google_analytics(ga_id, date_range = c(OneYearAgo , yesterday), metrics = c("sessions"), 
                                          dimensions = c("date"))
-str(galastyear) #pour voir ce que l'on a
-#Graphique 
+str(galastyear)
 galastyear %>%
   ggplot(aes(x = date,y = sessions) ) + 
   geom_point() + 
@@ -99,12 +70,11 @@ galastyear %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+Transactions during the last year, it correlates pretty much with the sessions graph from above
 ```{r}
-#Traffic en sessions sur 30 jours avec courbe de tendance
 galastyeartr <- google_analytics(ga_id, date_range = c(OneYearAgo , yesterday), metrics = c("transactions"), 
                                          dimensions = c("date"))
-str(galastyeartr) #pour voir ce que l'on a
-#Graphique 
+str(galastyeartr)
 galastyeartr %>%
   ggplot(aes(x = date,y = transactions) ) + 
   geom_point() + 
@@ -112,13 +82,11 @@ galastyeartr %>%
   geom_smooth(method = "loess") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-
+sessions during the last 30 days
 ```{r}
-#Traffic en sessions sur 30 jours avec courbe de tendance
 galastthirtydays <- google_analytics(ga_id, date_range = c(ThirtyDaysAgo , yesterday), metrics = c("sessions"), 
                                          dimensions = c("date"))
-str(galastthirtydays) #pour voir ce que l'on a
-#Graphique 
+str(galastthirtydays) 
 galastthirtydays %>%
   ggplot(aes(x = date,y = sessions) ) + 
   geom_point() + 
@@ -127,8 +95,8 @@ galastthirtydays %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+Sessions during the days of the week
 ```{r}
-#Jours les plus actifs dans l'année
 gadow <- google_analytics(ga_id, 
                            date_range = c(OneYearAgo , yesterday), 
                            metrics = c("sessions"), 
@@ -137,7 +105,6 @@ gadow %>%
   ggplot(aes(x = dayOfWeekName, y = sessions)) + 
   geom_boxplot() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-#on vire les valeurs extrêmes pour y voir plus clair
 gadow[gadow$sessions < 50,] %>%  
   ggplot(aes(x = dayOfWeekName, y = sessions)) + 
   geom_boxplot() +
@@ -152,15 +119,14 @@ ga5years <- google_analytics(ga_id,
                           max=-1)
 ```
 
-
+Sessions in framacph.com during the last 5 years
 ```{r}
 ga5years$year<-format(ga5years$date,"%Y")
 ggplot(ga5years, aes(x=date, y=sessions, color=year)) + 
   geom_line() 
 ```
-
+Tipe of device
 ```{r}
-#Type de device en fonction du continent
 gadevice <- google_analytics(ga_id, 
                            date_range = c(OneYearAgo , yesterday),
                            metrics = c("sessions"),

@@ -24,31 +24,31 @@ library(googleAnalyticsR)
 ```{r}
 ga_auth(email='jme@framacph.com')
 ```
-#```{r}
+```{r}
 my_accounts <- ga_account_list()
-#```
-#```{r}
+```
+```{r}
 view(my_accounts)
-#```
-#```{r}
-# dimension1 = No transactions
+```
+```{r}
+ dimension1 = No transactions
 metric1 <- met_filter("transactions","LESS_THAN",1)
 metric2 <- met_filter("users","GREATER_THAN",1)
 
-#```
-#```{r}
+```
+```{r}
 mfilters <- filter_clause_ga4(list(metric1,metric2),operator = "AND")
 
-#```
-#```{r}
+```
+```{r}
 ga_id <- 139359521
-#```
+```
 
 
 
 
 
-#```{r}
+```{r}
 ga_results <- google_analytics(ga_id,
                                date_range = c("2021-01-01", "2021-11-25"),
                                metrics = c('users', 'sessionsPerUser','avgSessionDuration','pageviews','hits','productAddsToCart','bounceRate'),
@@ -56,7 +56,8 @@ ga_results <- google_analytics(ga_id,
                                met_filters = mfilters,
                                 max = -1,
                             anti_sample = TRUE)
-#```
+```
+
 ```{r}
 euromarket <- ga_results %>%
     group_by(country) %>%
